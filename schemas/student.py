@@ -10,6 +10,6 @@ class Student(BaseModel):
         )
     age: int = Field(ge=0,le=120)
     city: str = "Beijing"
-    email:Optional[EmailStr] = None
+    # email:Optional[EmailStr] = None
 
    

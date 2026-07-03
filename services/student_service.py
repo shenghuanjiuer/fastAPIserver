@@ -1,14 +1,12 @@
-from typing import List, Optional
+# Service 层 业务逻辑、调用数据库操作 直接接收 db: Session 参数
 
-from sqlalchemy.orm.base import PASSIVE_OFF
+from typing import List, Optional
 from schemas.student import Student
 from database.models import Student as StudentModel
-from database.data import students
-from fastapi import Depends
-from dependencies.auth import get_current_user
+
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from database.database import get_db,add_data
+from database.database import add_data
 
 class StudentService:
 
@@ -35,21 +33,22 @@ class StudentService:
         return add_data(db, new_student)
 
     @staticmethod
-    def update_student(id: int, student: Student) -> Optional[dict]:
-        for s in students:
-            if s["id"] == id:
-                s.update(student.model_dump())
-                return s
+    def update_student(id: int, student: Student,db:Session) -> List[StudentModel]:
+        db_student = db.get(StudentModel,id)
+        if db_student:
+            for key,value in student.model_dump().items():
+                setattr(db_student,key,value)
+            db.commit()
+            db.refresh(db_student)
+            return db_student
         return None
 
     @staticmethod
-    def delete_student(id: int) -> bool:
-        for index, student in enumerate(students):
-            if student["id"] == id:
-                students.pop(index)
-                return True
+    def delete_student(id: int, db:Session) -> bool:
+        student = db.get(StudentModel,id)
+        if student:
+            db.delete(student)
+            db.commit()
+            return True
         return False
     
-    @staticmethod
-    def me(user = Depends(get_current_user)):
-        return user

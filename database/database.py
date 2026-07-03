@@ -20,8 +20,6 @@ SessionLocal = sessionmaker(
 class Base(DeclarativeBase):
     pass
 
-Base.metadata.create_all(engine)
-
 # 查询数据库会话
 def get_db():
     db = SessionLocal()

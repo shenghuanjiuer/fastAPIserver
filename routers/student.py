@@ -5,6 +5,8 @@ from schemas.student import Student
 from services.student_service import StudentService
 from database.database import get_db
 from sqlalchemy.orm import Session
+from fastapi import Depends
+
 router = APIRouter(prefix="/students", tags=["students"])
 
 
@@ -20,16 +22,14 @@ def get_students(name: str, db: Session = Depends(get_db)):
 
 
 @router.get("/city/{city}")
-def get_students_by_city(city: str):
-    return StudentService.get_students_by_city(city)
+def get_students_by_city(city: str,db: Session = Depends(get_db)):
+    return StudentService.get_students_by_city(city,db)
 
 
 @router.get("/{student_id}")
-def get_student(student_id: int):
-    student = StudentService.get_student_by_id(student_id)
-    if student:
-        return student
-    raise HTTPException(status_code=404, detail="Student not found")
+def get_student(student_id: int,db: Session = Depends(get_db)):
+    return StudentService.get_student_by_id(student_id,db)
+
 
 
 @router.post("")
@@ -38,15 +38,13 @@ def create_student(student: Student,db: Session = Depends(get_db)):
 
 
 @router.put("/{id}")
-def update_student(id: int, student: Student):
-    result = StudentService.update_student(id, student)
-    if result:
-        return result
-    raise HTTPException(status_code=404, detail="Student not found")
+def update_student(id: int, student: Student,db: Session = Depends(get_db)):
+    return StudentService.update_student(id, student,db)
+
 
 
 @router.delete("/{id}")
-def delete_student(id: int):
-    if StudentService.delete_student(id):
+def delete_student(id: int,db: Session = Depends(get_db)):
+    if StudentService.delete_student(id,db):
         return {"message": "删除成功"}
     raise HTTPException(status_code=404, detail="Student not found")
