@@ -1,6 +1,7 @@
+from fastapi import Depends, Header
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker,DeclarativeBase,Session
-
+from services.student_service import StudentService
 
 
 DATABASE_URL = "sqlite:///student.db"
@@ -38,3 +39,13 @@ def add_data(db:Session, data:Base):
     except Exception as e:
         db.rollback()
         raise e
+
+# 第二层依赖 - 依赖 get_db
+def get_student_service(db: Session = Depends(get_db)):
+    return StudentService(db)
+
+# 
+def get_current_student(
+    db: Session = Depends(get_student_service),
+    token: str = Header(...)):
+    return service.get_user_by_token(token)

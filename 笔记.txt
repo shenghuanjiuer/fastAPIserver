@@ -1,0 +1,25 @@
+可以把查询拆成四步：
+
+① select()
+
+↓
+
+构建SQL
+
+② where()
+
+↓
+
+增加条件
+
+③ Session(db)
+
+↓
+
+执行SQL
+
+④ all()/scalar()
+
+↓
+
+获取结果

@@ -1,50 +1,94 @@
 # 路由层 使用 Depends(get_db)
 
-from fastapi import APIRouter, HTTPException
-from schemas.student import Student
+from typing import List
+from fastapi import APIRouter, status, Depends, Path, Query, Body
+from schemas.student import Student, StudentOut, ResponseModel, StudentUpdate
 from services.student_service import StudentService
-from database.database import get_db
-from sqlalchemy.orm import Session
-from fastapi import Depends
+from core.exceptions import NotFoundException
+from dependencies.pagination import Pagination
+from dependencies import DBSession
 
 router = APIRouter(prefix="/students", tags=["students"])
 
 
-@router.get("")
-def get_students(db: Session = Depends(get_db)):
-    return StudentService.get_all_students(db)
+@router.get("", response_model=ResponseModel[List[StudentOut]])
+def get_students(db: DBSession, pagination: Pagination = Depends()):
+    students = StudentService.get_all_students(db, pagination)
+    return ResponseModel(data=students)
 
 
 @router.get("/search")
-def get_students(name: str, db: Session = Depends(get_db)):
+def get_students(
+    db: DBSession,
+    name: str = Query(..., description="学生姓名", min_length=2)
+):
     return StudentService.get_student_by_name(name, db)
-    
 
 
 @router.get("/city/{city}")
-def get_students_by_city(city: str,db: Session = Depends(get_db)):
-    return StudentService.get_students_by_city(city,db)
+def get_students_by_city(
+    db: DBSession,
+    city: str = Path(..., description="城市名称")
+):
+    return StudentService.get_students_by_city(city, db)
 
 
-@router.get("/{student_id}")
-def get_student(student_id: int,db: Session = Depends(get_db)):
-    return StudentService.get_student_by_id(student_id,db)
+@router.get("/{student_id}", response_model=ResponseModel[StudentOut])
+def get_student(
+    db: DBSession,
+    student_id: int = Path(..., description="学生ID")
+):
+    obj = StudentService.get_student_by_id(student_id, db)
+    if not obj:
+        raise NotFoundException(message="学生不存在")
+    return ResponseModel(data=obj)
 
 
-
-@router.post("")
-def create_student(student: Student,db: Session = Depends(get_db)):
-    return StudentService.create_student(student,db)
-
-
-@router.put("/{id}")
-def update_student(id: int, student: Student,db: Session = Depends(get_db)):
-    return StudentService.update_student(id, student,db)
+@router.post("", response_model=ResponseModel[StudentOut], status_code=status.HTTP_201_CREATED)
+def create_student(
+    db: DBSession,
+    student: Student = Body(..., description="学生信息")
+):
+    new_obj = StudentService.create_student(student, db)
+    return ResponseModel(data=new_obj)
 
 
+@router.put("/{id}", response_model=ResponseModel[StudentOut], status_code=status.HTTP_201_CREATED)
+def update_student(
+    db: DBSession,
+    id: int = Path(..., description="学生ID"),
+    student: Student = Body(..., description="学生信息")
+):
+    updated_obj = StudentService.update_student(id, student, db)
+    if not updated_obj:
+        raise NotFoundException(message="学生不存在")
+    return ResponseModel(data=updated_obj)
 
-@router.delete("/{id}")
-def delete_student(id: int,db: Session = Depends(get_db)):
-    if StudentService.delete_student(id,db):
-        return {"message": "删除成功"}
-    raise HTTPException(status_code=404, detail="Student not found")
+
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_student(
+    db: DBSession,
+    id: int = Path(..., description="学生ID")
+):
+    ok = StudentService.delete_student(id, db)
+    if not ok:
+        raise NotFoundException(message="学生不存在")
+    return None
+
+
+@router.patch(
+    "/{id}",
+    response_model=ResponseModel[StudentOut],
+    response_model_exclude_unset=True,
+    status_code=status.HTTP_201_CREATED
+)
+def patch_student(
+    db: DBSession,
+    id: int = Path(..., description="学生ID"),
+    student: StudentUpdate = Body(..., description="学生信息")
+):
+    payload = student.model_dump(exclude_unset=True)
+    updated = StudentService.partial_update(id, payload, db)
+    if not updated:
+        raise NotFoundException(message="学生不存在")
+    return ResponseModel(data=updated)
